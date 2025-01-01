@@ -24,32 +24,32 @@ user_agents = [
 
 
 
+# Class that holds the link and price of the part
+class link_and_price:
+    def __init__(self, link, price):
+        self.link = link
+        self.price = price
+
+
+
+
+
+
 # Class that acts as a struct to hold the value of a part's name, its link, and its price
-class links_and_prices: 
-    def __init__(self, part_name, list_of_links, list_of_prices, total_price): 
+class full_part_information: 
+    def __init__(self, part_name, price, link): 
         self.name = part_name
-        self.links = list_of_links
-        self.prices = list_of_prices
-        self.total = total_price
+        self.price = price
+        self.link = link
 
 
 
 
 
 # Uses a ThreadPoolExecutor to search for every product at once, reducing search time greatly
-def fetch_product_links(products):
+def fetch_products(products):
     with ThreadPoolExecutor() as executor:
         results = executor.map(search_for_product, products)
-    return list(results)
-
-
-
-
-
-# Uses a ThreadPoolExecutor to get the price of each product
-def fetch_product_prices(links):
-    with ThreadPoolExecutor() as executor:
-        results = executor.map(get_price, links)
     return list(results)
 
 
@@ -103,6 +103,20 @@ def search_for_product(product_name):
         # Parse the website
         soup = BeautifulSoup(response.text, 'html.parser')
 
+        price = ""
+
+        # Finding and adding the item's dollar price to the total price
+        price_part = soup.find("span", class_ = "a-price-whole")
+
+        price += price_part.get_text()
+
+        # Finding and adding the item's cent price to the total price
+        price_part = soup.find("span", class_ = "a-price-fraction")
+        
+        price += price_part.get_text()
+
+
+
         # Search for the product tag with the anchor tag
         product_link_tag = soup.find('a', class_ = "a-link-normal s-line-clamp-2 s-link-style a-text-normal")
 
@@ -114,7 +128,9 @@ def search_for_product(product_name):
             # Create the product link
             full_link = "https://www.amazon.com" + product_link
 
-            return full_link
+            part_information = link_and_price(full_link, price)
+
+            return part_information
         
         
         print("Link not found")
@@ -126,52 +142,6 @@ def search_for_product(product_name):
         return None
 
 
-
-
-
-# Uses web scraping to search for a product's link on Amazon
-def get_price(product_link):
-
-    # Randomly determining the user agent
-    headers = {
-        "User-Agent": random.choice(user_agents),
-        "Accept-Language": "en-US,en;q=0.9"
-    }
-
-    # Attempting to open the link
-    response = requests.get(product_link, headers = headers)
-
-    # Proceed if the link is opened
-    if response.status_code == 200:
-
-        # Parse the website
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        price = ""
-
-
-
-        # Finding and adding the item's dollar price to the total price
-        price_part = soup.find("span", class_ = "a-price-whole")
-
-        price += price_part.get_text()
-
-
-
-        # Finding and adding the item's cent price to the total price
-        price_part = soup.find("span", class_ = "a-price-fraction")
-        
-        price += price_part.get_text()
-
-
-
-        return price
-
-    # If the link didn't open, None is returned
-    else:
-        
-        print("Price link could not open")
-        return None
 
 
 
@@ -239,45 +209,31 @@ def curate_parts(preferences, budget):
         part_list = chatbot_message.split(", ")
 
         # Getting the link to all our parts
-        part_list_links = fetch_product_links(part_list)
+        part_list_information = fetch_products(part_list)
 
         # Adding the Windows 11 Home Operating System Key
+        
         part_list.append("Windows 11 Home")
-        part_list_links.append("https://www.amazon.com/Microsoft-Wind%D0%BEws-Home-OEM-DVD/dp/B09MYJ1R6L/ref=sr_1_1?dib=eyJ2IjoiMSJ9.pFCeP8bWY4VhVGPqDCr7M9_lGhQYby0p_dGNbKvfiAHGVNDm0RreLP2RQ9jzqabWk-wY8BedxAwwv5Ch0KbbOSnBp-icPUlw4ebPZWgoDz-OkQaJCh7rO3DzIS5nKRlE2Dv2pMW4qTWzgU0hGnI26jbK6pDuwdChkmu5Xt68rAI3o0f6yFN4na2l2Gi55SBAQLaXMqTUB5gO7HN_RetfQDhqxMp1Nut5F-O9I6cPuFQ.p2d3DLw4aqJunsOPUkCZzaUvwqvVkEUxmsOzzRT4K4c&dib_tag=se&keywords=Windows+11+Home+Install&qid=1735539609&sr=8-1")
-
-
+        part_list_information.append(link_and_price("https://www.amazon.com/Microsoft-Wind%D0%BEws-Home-OEM-DVD/dp/B09MYJ1R6L/ref=sr_1_1?dib=eyJ2IjoiMSJ9.pFCeP8bWY4VhVGPqDCr7M9_lGhQYby0p_dGNbKvfiAHGVNDm0RreLP2RQ9jzqabWk-wY8BedxAwwv5Ch0KbbOSnBp-icPUlw4ebPZWgoDz-OkQaJCh7rO3DzIS5nKRlE2Dv2pMW4qTWzgU0hGnI26jbK6pDuwdChkmu5Xt68rAI3o0f6yFN4na2l2Gi55SBAQLaXMqTUB5gO7HN_RetfQDhqxMp1Nut5F-O9I6cPuFQ.p2d3DLw4aqJunsOPUkCZzaUvwqvVkEUxmsOzzRT4K4c&dib_tag=se&keywords=Windows+11+Home+Install&qid=1735539609&sr=8-1", "119.99"))
 
         # If the part list contains a None, we start over after letting chatgpt of the mistake
-        if None in part_list_links:
+        if None in part_list_information:
 
             get_chat_response("One of the parts you chose was not found on amazon, provide a different part list.")
 
             continue
 
+        total = 0
+
+        for i in range(9):
+            part_price = float(part_list_information[i].price.replace(',', ''))
+            total += part_price
 
 
-        # Getting the prices from each part link 
-        part_list_prices = fetch_product_prices(part_list_links)
-
-        # If the price list contains a None, we start over after letting chatgpt of the mistake
-        if None in part_list_prices:
-
-            get_chat_response("An issue was ran into while finding prices for the PC, provide a different part list.")
-
-            continue
-
-
-
-        # Ensure there are no comments in the prices and adding up for the total with tax
-        part_list_prices = [float(price.replace(',', '')) for price in part_list_prices]
-
-        total = sum(part_list_prices)
 
         total += total * tax_rate
 
         total = round(total, 2)
-
-
 
         # If the budget is exceeded, we try again and let chatgpt know the budget was exceeded
         if total > budget:
@@ -307,12 +263,27 @@ def curate_parts(preferences, budget):
         for i in range(9):
             part_full_name.append(part_category[i] + ": " + part_list[i])
 
+        parts = []
 
-
-        # Creating our struct to return
-        parts = links_and_prices(part_full_name, part_list_links, part_list_prices, total)
+        for i in range(9):
+            parts.append(full_part_information(part_full_name[i], part_list_information[i].price, part_list_information[i].link))
 
         return parts
+
+
+# list = curate_parts("intel cpu, nvidia gpu, wifi, california, 1440p gaming", 2000)
+
+# for i in range(9):
+#     print(list[i].name)
+#     print(list[i].link)
+#     print(list[i].price)
+
+
+
+# quit()
+
+
+
 
 
 
@@ -345,8 +316,10 @@ connection_preference = ""
 tax_preference = ""
 changes_to_make = ""
 prompt = ""
-budget = float
-parts_list = links_and_prices
+budget = 0
+tax_rate = 0
+total = 0
+parts_list = full_part_information
 
 
 
@@ -441,6 +414,10 @@ while True:
 
         prompt = input("User: ")
 
+        tax_rate = float(get_chat_response(f"""Read through the preferences and find the state given. Provide me the tax rate. For example, don't
+                                        provide 0.0725% but instead just 0.0725. You must provide only the value, so don't explain what
+                                        you will do or anything, simply tell me the tax rate '0.0725'. The prompt is {prompt}."""))
+
         tax_preference += ", " + prompt
 
         get_chat_response(prompt)
@@ -479,14 +456,31 @@ while True:
         
         print("\n")
         print("\n")
+        
 
-        for i in range(len(parts_list.links)):
-            print(parts_list.name[i])
-            print("Price: $", parts_list.prices[i])
-            print(parts_list.links[i])
+
+        for i in range(len(parts_list)):
+            print(parts_list[i].name)
+            print("Price: $", parts_list[i].price)
+            print(parts_list[i].link)
             print("\n")
 
-        print("Total Price: $", parts_list.total)
+
+
+        for i in range(9):
+            part_price = float(parts_list[i].price.replace(',', ''))
+            total += part_price
+
+        total += total * tax_rate
+
+        total = round(total, 2)
+
+        formatted_price = "${:.2f}".format(total)
+
+        print(f"Total Price: {formatted_price}")
+        print("\n")
+
+
 
         print("Chatbot: ", chatbot_message)
 
@@ -503,19 +497,24 @@ while True:
 
         with open(file_name, "w") as file:
 
-            for i in range(len(parts_list.links)):
-                file.write(f"{parts_list.name[i]} \n")
-                file.write(f"Price: $: {parts_list.prices[i]} \n")
-                file.write(f"Link: {parts_list.links[i]} \n")
+            for i in range(len(parts_list)):
+                file.write(f"{parts_list[i].name} \n")
+                file.write(f"Price: ${parts_list[i].price} \n")
+                file.write(f"Link: {parts_list[i].link} \n")
                 file.write("\n")
+
+            formatted_price = "{:.2f}".format(total)
             
-            file.write(f"Total Price: ${parts_list.total}")
+            file.write(f"Total Price: ${formatted_price}")
+
 
 
         chatbot_message = get_chat_response(f"""Wait for the user to ask for any changes or simply answer any of the user's questions about the build.
                                                Let the user know that the file has been saved under the name {file_name} and they can access
                                                it at any time.""")
         
+
+
         print("Chatbot: ", chatbot_message)
 
         prompt = input("User: ")
