@@ -271,16 +271,6 @@ def curate_parts(preferences, budget):
         return parts
 
 
-# list = curate_parts("intel cpu, nvidia gpu, wifi, california, 1440p gaming", 2000)
-
-# for i in range(9):
-#     print(list[i].name)
-#     print(list[i].link)
-#     print(list[i].price)
-
-
-
-# quit()
 
 
 
@@ -499,7 +489,7 @@ while True:
 
             for i in range(len(parts_list)):
                 file.write(f"{parts_list[i].name} \n")
-                file.write(f"Price: ${parts_list[i].price} \n")
+                file.write(f"Price: {parts_list[i].price} \n")
                 file.write(f"Link: {parts_list[i].link} \n")
                 file.write("\n")
 
